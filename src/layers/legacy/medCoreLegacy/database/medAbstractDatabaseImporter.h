@@ -82,7 +82,8 @@ protected:
 
     QStringList getAllFilesToBeProcessed ( QString fileOrDirectory );
 
-    medAbstractData *tryReadImages ( const QStringList& filesPath,const bool readOnlyImageInformation );
+    QVector<dtkSmartPointer<medAbstractData>> tryReadImages(const QStringList& filesPath,  bool readOnlyImageInformation);
+    //medAbstractData *tryReadImages ( const QStringList& filesPath,const bool readOnlyImageInformation );
     bool tryWriteImage ( QString filePath, medAbstractData* medData );
 
     QString determineFutureImageFileName ( const medAbstractData* medData, int volumeNumber );

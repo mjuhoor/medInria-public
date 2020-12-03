@@ -17,6 +17,7 @@
 #include <medAbstractData.h>
 #include <medAbstractDatabaseImporter.h>
 #include <medAbstractDataFactory.h>
+#include <medAbstractDataReader.h>
 #include <medAbstractImageData.h>
 #include <medDatabaseController.h>
 #include <medGlobalDefs.h>
@@ -206,82 +207,86 @@ void medAbstractDatabaseImporter::importFile ( void )
 
             // 2.1) Try reading file information, just the header not the whole file
             bool readOnlyImageInformation = true;
-            medData = tryReadImages ( QStringList ( fileInfo.filePath() ), readOnlyImageInformation );
+            QVector<dtkSmartPointer<medAbstractData>> readData;
+            readData = tryReadImages ( QStringList ( fileInfo.filePath() ), readOnlyImageInformation );
 
-            if ( !medData )
+            for (auto& medData : readData)
             {
-                if (!atLeastOneImportError)
+                if (medData.isNull())
                 {
-                    qWarning() << "Reader was unable to read at least: " << fileInfo.filePath();
-                    atLeastOneImportError = true;
+                    if (!atLeastOneImportError)
+                    {
+                        qWarning() << "Reader was unable to read at least: " << fileInfo.filePath();
+                        atLeastOneImportError = true;
+                    }
+                    continue;
                 }
-                continue;
-            }
 
-            // 2.2) Fill missing metadata
-            populateMissingMetadata ( medData, med::smartBaseName(fileInfo.fileName()));
-            QString patientName = medMetaDataKeys::PatientName.getFirstValue(medData).simplified();
-            QString birthDate = medMetaDataKeys::BirthDate.getFirstValue(medData);
-            tmpPatientId = patientName + birthDate;
+                // 2.2) Fill missing metadata
+                populateMissingMetadata ( medData, med::smartBaseName(fileInfo.fileName()));
+                QString patientName = medMetaDataKeys::PatientName.getFirstValue(medData).simplified();
+                QString birthDate = medMetaDataKeys::BirthDate.getFirstValue(medData);
+                tmpPatientId = patientName + birthDate;
 
-            if(tmpPatientId != currentPatientId)
-            {
-                currentPatientId = tmpPatientId;
+                if(tmpPatientId != currentPatientId)
+                {
+                    currentPatientId = tmpPatientId;
 
-                patientID = getPatientID(patientName, birthDate);
-            }
+                    patientID = getPatientID(patientName, birthDate);
+                }
 
-            medData->setMetaData ( medMetaDataKeys::PatientID.key(), QStringList() << patientID );
+                medData->setMetaData ( medMetaDataKeys::PatientID.key(), QStringList() << patientID );
 
-            tmpSeriesUid = medMetaDataKeys::SeriesInstanceUID.getFirstValue(medData);
+                tmpSeriesUid = medMetaDataKeys::SeriesInstanceUID.getFirstValue(medData);
 
-            if (tmpSeriesUid != currentSeriesUid)
-            {
-                currentSeriesUid = tmpSeriesUid;
-                currentSeriesId = medMetaDataKeys::SeriesID.getFirstValue(medData);
-            }
-            else
-                medData->setMetaData ( medMetaDataKeys::SeriesID.key(), QStringList() << currentSeriesId );
+                if (tmpSeriesUid != currentSeriesUid)
+                {
+                    currentSeriesUid = tmpSeriesUid;
+                    currentSeriesId = medMetaDataKeys::SeriesID.getFirstValue(medData);
+                }
+                else
+                    medData->setMetaData ( medMetaDataKeys::SeriesID.key(), QStringList() << currentSeriesId );
 
-            // 2.3) Generate an unique id for each volume
-            // all images of the same volume should share the same id
-            QString volumeId = generateUniqueVolumeId ( medData );
+                // 2.3) Generate an unique id for each volume
+                // all images of the same volume should share the same id
+                QString volumeId = generateUniqueVolumeId ( medData );
 
-            // check whether the image belongs to a new volume
-            if ( !volumeUniqueIdToVolumeNumber.contains ( volumeId ) )
-            {
-                volumeUniqueIdToVolumeNumber[volumeId] = volumeNumber;
-                volumeNumber++;
-            }
+                // check whether the image belongs to a new volume
+                if ( !volumeUniqueIdToVolumeNumber.contains ( volumeId ) )
+                {
+                    volumeUniqueIdToVolumeNumber[volumeId] = volumeNumber;
+                    volumeNumber++;
+                }
 
-            // 2.3) a) Determine future file name and path based on patient/study/series/image
-            // i.e.: where we will write the imported image
-            QString imageFileName = determineFutureImageFileName ( medData, volumeUniqueIdToVolumeNumber[volumeId] );
+                // 2.3) a) Determine future file name and path based on patient/study/series/image
+                // i.e.: where we will write the imported image
+                QString imageFileName = determineFutureImageFileName ( medData, volumeUniqueIdToVolumeNumber[volumeId] );
 #ifdef Q_OS_WIN32
-            if ( (medStorage::dataLocation() + "/" + imageFileName).length() > 255 )
-            {
-                emit showError ( tr ( "Your database path is too long" ), 5000 );
-                emit dataImported(medDataIndex(), d->uuid);
-                emit failure ( this );
-                return;
-            }
+                if ( (medStorage::dataLocation() + "/" + imageFileName).length() > 255 )
+                {
+                    emit showError ( tr ( "Your database path is too long" ), 5000 );
+                    emit dataImported(medDataIndex(), d->uuid);
+                    emit failure ( this );
+                    return;
+                }
 #endif
-            // 2.3) b) Find the proper extension according to the type of the data
-            // i.e.: in which format we will write the file in our database
-            QString futureExtension  = determineFutureImageExtensionByDataType ( medData );
+                // 2.3) b) Find the proper extension according to the type of the data
+                // i.e.: in which format we will write the file in our database
+                QString futureExtension  = determineFutureImageExtensionByDataType ( medData );
 
-            // we care whether we can write the image or not if we are importing
-            if (!d->indexWithoutImporting && futureExtension.isEmpty()) {
-                emit showError(tr("Could not save file due to unhandled data type: ") + medData->identifier(), 5000);
-                continue;
+                // we care whether we can write the image or not if we are importing
+                if (!d->indexWithoutImporting && futureExtension.isEmpty()) {
+                    emit showError(tr("Could not save file due to unhandled data type: ") + medData->identifier(), 5000);
+                    continue;
+                }
+
+                imageFileName = imageFileName + futureExtension;
+
+                // 2.3) c) Add the image to a map for writing them all in the database in a posterior step
+                imagesGroupedByVolume[imageFileName] << fileInfo.filePath();
+                imagesGroupedByPatient[imageFileName] = patientID;
+                imagesGroupedBySeriesId[imageFileName] = currentSeriesId;
             }
-
-            imageFileName = imageFileName + futureExtension;
-
-            // 2.3) c) Add the image to a map for writing them all in the database in a posterior step
-            imagesGroupedByVolume[imageFileName] << fileInfo.filePath();
-            imagesGroupedByPatient[imageFileName] = patientID;
-            imagesGroupedBySeriesId[imageFileName] = currentSeriesId;
         }
         else
         {
@@ -339,71 +344,74 @@ void medAbstractDatabaseImporter::importFile ( void )
         patientID = itPat.value();
         QString seriesID = itSer.value();
 
-        dtkSmartPointer<medAbstractData> imagemedData;
+        QVector<dtkSmartPointer<medAbstractData>> data;
 
         // 3.2) Try to read the whole image, not just the header
         bool readOnlyImageInformation = false;
-        imagemedData = tryReadImages ( filesPaths, readOnlyImageInformation );
+        data = tryReadImages (filesPaths, readOnlyImageInformation);
 
-        if ( imagemedData )
+        for (auto& medData : data)
         {
-            // 3.3) a) re-populate missing metadata
-            // as files might be aggregated we use the aggregated file name as SeriesDescription (if not provided, of course)
-            QFileInfo imagefileInfo ( filesPaths[0] );
-            populateMissingMetadata ( imagemedData, med::smartBaseName(imagefileInfo.fileName()) );
-            imagemedData->setMetaData ( medMetaDataKeys::PatientID.key(), QStringList() << patientID );
-            imagemedData->setMetaData ( medMetaDataKeys::SeriesID.key(), QStringList() << seriesID );
-
-            // 3.3) b) now we are able to add some more metadata
-            addAdditionalMetaData ( imagemedData, aggregatedFileName, filesPaths );
-        }
-        else
-        {
-            qWarning() << "Could not repopulate data!";
-            emit showError (tr ( "Could not read data: " ) + filesPaths[0], 5000 );
-            emit dataImported(medDataIndex(), d->uuid);
-            emit failure(this);
-            return;
-        }
-
-        if ( !d->indexWithoutImporting )
-        {
-            // create location to store file
-            QFileInfo fileInfo ( medStorage::dataLocation() + aggregatedFileName );
-            if ( !fileInfo.dir().exists() && !medStorage::mkpath ( fileInfo.dir().path() ) )
+            if (!medData.isNull())
             {
-                qDebug() << "Cannot create directory: " << fileInfo.dir().path();
-                continue;
+                // 3.3) a) re-populate missing metadata
+                // as files might be aggregated we use the aggregated file name as SeriesDescription (if not provided, of course)
+                QFileInfo imagefileInfo(filesPaths[0] );
+                populateMissingMetadata(medData, med::smartBaseName(imagefileInfo.fileName()));
+                medData->setMetaData(medMetaDataKeys::PatientID.key(), QStringList() << patientID);
+                medData->setMetaData(medMetaDataKeys::SeriesID.key(), QStringList() << seriesID);
+
+                // 3.3) b) now we are able to add some more metadata
+                addAdditionalMetaData (medData, aggregatedFileName, filesPaths);
+            }
+            else
+            {
+                qWarning() << "Could not repopulate data!";
+                emit showError (tr ( "Could not read data: " ) + filesPaths[0], 5000 );
+                emit dataImported(medDataIndex(), d->uuid);
+                emit failure(this);
+                return;
             }
 
-            // now writing file
-            bool writeSuccess = tryWriteImage ( fileInfo.filePath(), imagemedData );
-
-            if ( !writeSuccess )
+            if ( !d->indexWithoutImporting )
             {
-                emit showError (tr ( "Could not save data file: " ) + filesPaths[0], 5000 );
-                continue;
+                // create location to store file
+                QFileInfo fileInfo ( medStorage::dataLocation() + aggregatedFileName );
+                if ( !fileInfo.dir().exists() && !medStorage::mkpath ( fileInfo.dir().path() ) )
+                {
+                    qDebug() << "Cannot create directory: " << fileInfo.dir().path();
+                    continue;
+                }
+
+                // now writing file
+                bool writeSuccess = tryWriteImage(fileInfo.filePath(), medData);
+
+                if ( !writeSuccess )
+                {
+                    emit showError (tr ( "Could not save data file: " ) + filesPaths[0], 5000 );
+                    continue;
+                }
             }
-        }
-        atLeastOneImportSucceeded = true;
+            atLeastOneImportSucceeded = true;
 
-        // and finally we populate the database
-        QFileInfo aggregatedFileNameFileInfo ( aggregatedFileName );
-        QString pathToStoreThumbnails = aggregatedFileNameFileInfo.dir().path() + "/" + aggregatedFileNameFileInfo.completeBaseName() + "/";
-        index = this->populateDatabaseAndGenerateThumbnails ( imagemedData, pathToStoreThumbnails );
+            // and finally we populate the database
+            QFileInfo aggregatedFileNameFileInfo ( aggregatedFileName );
+            QString pathToStoreThumbnails = aggregatedFileNameFileInfo.dir().path() + "/" + aggregatedFileNameFileInfo.completeBaseName() + "/";
+            index = this->populateDatabaseAndGenerateThumbnails(medData, pathToStoreThumbnails);
 
-        if(!d->uuid.isNull())
-        {
-            emit dataImported(index, d->uuid);
-        }
-        else
-        {
-            emit dataImported(index);
-        }
+            if(!d->uuid.isNull())
+            {
+                emit dataImported(index, d->uuid);
+            }
+            else
+            {
+                emit dataImported(index);
+            }
 
-        itPat++;
-        itSer++;
-    } // end of the final loop
+            itPat++;
+            itSer++;
+        }
+    } // end of the final loopi
 
     if ( ! atLeastOneImportSucceeded) {
         emit progress ( this,100 );
@@ -794,16 +802,32 @@ QStringList medAbstractDatabaseImporter::getAllFilesToBeProcessed ( QString file
 * @param readOnlyImageInformation - if true only image header is read, otherwise the full image
 * @return a @medAbstractData containing the read data
 **/
-medAbstractData* medAbstractDatabaseImporter::tryReadImages ( const QStringList& filesPaths,const bool readOnlyImageInformation )
+QVector<dtkSmartPointer<medAbstractData>> medAbstractDatabaseImporter::tryReadImages(const QStringList& filesPaths, bool readOnlyImageInformation)
 {
+    QVector<dtkSmartPointer<medAbstractData>> data;
     medAbstractData *medData = nullptr;
 
     dtkSmartPointer<dtkAbstractDataReader> dataReader;
     dataReader = getSuitableReader ( filesPaths );
+    bool readSuccessful = false;
 
-    if ( dataReader )
+    medAbstractDataReader* medReader = qobject_cast<medAbstractDataReader*>(dataReader);
+    if (medReader)
     {
-        bool readSuccessful = false;
+        std::cout<<" ------- IN TRY READ IMAGES WITH MED READER ------------ "<<std::endl;
+        // can be a multi part data
+        if (readOnlyImageInformation)
+        {
+            readSuccessful = medReader->readInformation(filesPaths);
+        }
+        else
+        {
+            readSuccessful = medReader->read(filesPaths);
+        }
+        data = medReader->getData();
+    }
+    else if (dataReader)
+    {
         if ( readOnlyImageInformation )
         {
             readSuccessful = dataReader->readInformation ( filesPaths );
@@ -816,10 +840,11 @@ medAbstractData* medAbstractDatabaseImporter::tryReadImages ( const QStringList&
         if (readSuccessful)
         {
             medData = dynamic_cast<medAbstractData*>(dataReader->data());
+            data.push_back(medData);
         }
     }
 
-    return medData;
+    return data;
 }
 
 //-----------------------------------------------------------------------------------------------------------
