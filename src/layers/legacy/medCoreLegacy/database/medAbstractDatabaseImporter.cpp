@@ -191,20 +191,21 @@ void medAbstractDatabaseImporter::importFile ( void )
     bool atLeastOneImportSucceeded = false;
     bool atLeastOneImportError = false;
 
+    //TODO: reading and filtering represents 50% of the importing process?
+    float progressOffset = 50.0;
+
     for( QString file: fileList )
     {
         if ( d->isCancelled ) // check if user canceled the process
             break;
 
-        emit progress ( this, ( ( qreal ) currentFileNumber/ ( qreal ) fileList.count() ) * 50.0 ); //TODO: reading and filtering represents 50% of the importing process?
+        emit progress ( this, ( ( qreal ) currentFileNumber/ ( qreal ) fileList.count() ) * progressOffset);
 
         currentFileNumber++;
 
         QFileInfo fileInfo ( file );
         if (fileInfo.size() != 0)
         {
-            dtkSmartPointer<medAbstractData> medData;
-
             // 2.1) Try reading file information, just the header not the whole file
             bool readOnlyImageInformation = true;
             QVector<dtkSmartPointer<medAbstractData>> readData;
@@ -275,7 +276,8 @@ void medAbstractDatabaseImporter::importFile ( void )
                 QString futureExtension  = determineFutureImageExtensionByDataType ( medData );
 
                 // we care whether we can write the image or not if we are importing
-                if (!d->indexWithoutImporting && futureExtension.isEmpty()) {
+                if (!d->indexWithoutImporting && futureExtension.isEmpty())
+                {
                     emit showError(tr("Could not save file due to unhandled data type: ") + medData->identifier(), 5000);
                     continue;
                 }
@@ -296,6 +298,13 @@ void medAbstractDatabaseImporter::importFile ( void )
         }
     }
 
+    // Create a map that associates, for each list of files, a list of data
+    QMap<QStringList, QStringList> fileNamesToDataNames;
+    for (auto it = imagesGroupedByVolume.begin(); it != imagesGroupedByVolume.end(); ++it)
+    {
+        fileNamesToDataNames[it.value()] << it.key();
+    }
+
     // some checks to see if the user cancelled or something failed
     if ( d->isCancelled )
     {
@@ -308,15 +317,9 @@ void medAbstractDatabaseImporter::importFile ( void )
     // from now on the process cannot be cancelled
     emit disableCancel ( this );
 
-    // 3) Re-read selected files and re-populate them with missing metadata
-    //    then write them to the database, and populate db tables
-    QMap<QString, QStringList>::const_iterator it = imagesGroupedByVolume.begin();
-    QMap<QString, QString>::const_iterator  itPat = imagesGroupedByPatient.begin();
-    QMap<QString, QString>::const_iterator  itSer = imagesGroupedBySeriesId.begin();
-
-    // 3.1) first check is after the filtering we have something to import
-    // maybe we had problems with all the files, or they were already in the database
-    if ( it == imagesGroupedByVolume.end() )
+    // 3) First check is after the filtering we have something to import.
+    //    Maybe we had problems with all the files, or they were already in the database
+    if (fileNamesToDataNames.isEmpty())
     {
         // TODO we know if it's either one or the other error, we can make this error better...
         emit showError (tr ( "No compatible image found or all of them had been already imported." ), 5000 );
@@ -332,31 +335,32 @@ void medAbstractDatabaseImporter::importFile ( void )
 
     medDataIndex index; //stores the last volume's index to be emitted on success
 
-    // final loop: re-read, re-populate and write to db
-    for ( ; it != imagesGroupedByVolume.end(); it++ )
+    emit progress (this, progressOffset);
+    // 3.1) Re-read selected files and re-populate them with missing metadata
+    //      then write them to the database, and populate db tables
+    for (auto it = fileNamesToDataNames.begin(); it != fileNamesToDataNames.end(); ++it)
     {
-        emit progress ( this, ( ( qreal ) currentImageIndex/ ( qreal ) imagesCount ) * 50.0 + 50.0 ); // 50? I do not think that reading all the headers is half the job...
-
-        currentImageIndex++;
-
-        QString aggregatedFileName = it.key(); // note that this file might be aggregating more than one input files
-        QStringList filesPaths = it.value();   // input files being aggregated, might be only one or many
-        patientID = itPat.value();
-        QString seriesID = itSer.value();
-
-        QVector<dtkSmartPointer<medAbstractData>> data;
+        QStringList filesPaths = it.key();   // input files being aggregated, might be only one or many
 
         // 3.2) Try to read the whole image, not just the header
         bool readOnlyImageInformation = false;
-        data = tryReadImages (filesPaths, readOnlyImageInformation);
+        auto data = tryReadImages (filesPaths, readOnlyImageInformation);
 
-        for (auto& medData : data)
+        for (int i = 0; i < data.size(); ++i)
         {
+            emit progress (this, ((qreal)currentImageIndex / (qreal)imagesCount) * (100.0 - progressOffset) + progressOffset);
+            currentImageIndex++;
+
+            auto medData = data[i];
+            QString aggregatedFileName = it.value()[i]; // note that this file might be aggregating more than one input files
             if (!medData.isNull())
             {
                 // 3.3) a) re-populate missing metadata
                 // as files might be aggregated we use the aggregated file name as SeriesDescription (if not provided, of course)
-                QFileInfo imagefileInfo(filesPaths[0] );
+                QFileInfo imagefileInfo(filesPaths[0]);
+                patientID = imagesGroupedByPatient[aggregatedFileName];
+                QString seriesID = imagesGroupedBySeriesId[aggregatedFileName];
+
                 populateMissingMetadata(medData, med::smartBaseName(imagefileInfo.fileName()));
                 medData->setMetaData(medMetaDataKeys::PatientID.key(), QStringList() << patientID);
                 medData->setMetaData(medMetaDataKeys::SeriesID.key(), QStringList() << seriesID);
@@ -367,17 +371,17 @@ void medAbstractDatabaseImporter::importFile ( void )
             else
             {
                 qWarning() << "Could not repopulate data!";
-                emit showError (tr ( "Could not read data: " ) + filesPaths[0], 5000 );
+                emit showError (tr("Could not read data: ") + filesPaths[0], 5000);
                 emit dataImported(medDataIndex(), d->uuid);
                 emit failure(this);
                 return;
             }
 
-            if ( !d->indexWithoutImporting )
+            if (!d->indexWithoutImporting)
             {
                 // create location to store file
-                QFileInfo fileInfo ( medStorage::dataLocation() + aggregatedFileName );
-                if ( !fileInfo.dir().exists() && !medStorage::mkpath ( fileInfo.dir().path() ) )
+                QFileInfo fileInfo(medStorage::dataLocation() + aggregatedFileName);
+                if (!fileInfo.dir().exists() && !medStorage::mkpath(fileInfo.dir().path()))
                 {
                     qDebug() << "Cannot create directory: " << fileInfo.dir().path();
                     continue;
@@ -386,16 +390,16 @@ void medAbstractDatabaseImporter::importFile ( void )
                 // now writing file
                 bool writeSuccess = tryWriteImage(fileInfo.filePath(), medData);
 
-                if ( !writeSuccess )
+                if (!writeSuccess)
                 {
-                    emit showError (tr ( "Could not save data file: " ) + filesPaths[0], 5000 );
+                    emit showError(tr("Could not save data file: ") + filesPaths[0], 5000);
                     continue;
                 }
             }
             atLeastOneImportSucceeded = true;
 
             // and finally we populate the database
-            QFileInfo aggregatedFileNameFileInfo ( aggregatedFileName );
+            QFileInfo aggregatedFileNameFileInfo(aggregatedFileName);
             QString pathToStoreThumbnails = aggregatedFileNameFileInfo.dir().path() + "/" + aggregatedFileNameFileInfo.completeBaseName() + "/";
             index = this->populateDatabaseAndGenerateThumbnails(medData, pathToStoreThumbnails);
 
@@ -407,11 +411,8 @@ void medAbstractDatabaseImporter::importFile ( void )
             {
                 emit dataImported(index);
             }
-
-            itPat++;
-            itSer++;
         }
-    } // end of the final loopi
+    } // end of the final loop
 
     if ( ! atLeastOneImportSucceeded) {
         emit progress ( this,100 );
@@ -814,7 +815,6 @@ QVector<dtkSmartPointer<medAbstractData>> medAbstractDatabaseImporter::tryReadIm
     medAbstractDataReader* medReader = qobject_cast<medAbstractDataReader*>(dataReader);
     if (medReader)
     {
-        std::cout<<" ------- IN TRY READ IMAGES WITH MED READER ------------ "<<std::endl;
         // can be a multi part data
         if (readOnlyImageInformation)
         {
