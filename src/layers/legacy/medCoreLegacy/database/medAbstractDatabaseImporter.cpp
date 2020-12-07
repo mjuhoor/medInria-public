@@ -246,7 +246,9 @@ void medAbstractDatabaseImporter::importFile ( void )
                     currentSeriesId = medMetaDataKeys::SeriesID.getFirstValue(medData);
                 }
                 else
+                {
                     medData->setMetaData ( medMetaDataKeys::SeriesID.key(), QStringList() << currentSeriesId );
+                }
 
                 // 2.3) Generate an unique id for each volume
                 // all images of the same volume should share the same id
@@ -586,9 +588,6 @@ void medAbstractDatabaseImporter::populateMissingMetadata ( medAbstractData* med
 
     if ( !medData->hasMetaData ( medMetaDataKeys::StudyID.key() ) )
         medData->setMetaData ( medMetaDataKeys::StudyID.key(), QStringList() << "0" );
-
-    if ( !medData->hasMetaData ( medMetaDataKeys::SeriesInstanceUID.key() ) )
-        medData->setMetaData ( medMetaDataKeys::SeriesInstanceUID.key(), QStringList() << "" );
 
     QString generatedSeriesId = QUuid::createUuid().toString().replace("{","").replace("}","");
 
