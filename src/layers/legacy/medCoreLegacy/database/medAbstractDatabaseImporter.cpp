@@ -37,6 +37,9 @@ public:
     QMap<int, QString> volumeIdToImageFile;
 
     QUuid uuid;
+
+    float progressOffset;
+    float progressIncrement;
 };
 
 QMutex medAbstractDatabaseImporterPrivate::mutex;
@@ -192,14 +195,14 @@ void medAbstractDatabaseImporter::importFile ( void )
     bool atLeastOneImportError = false;
 
     //TODO: reading and filtering represents 50% of the importing process?
-    float progressOffset = 50.0;
+    float readInfoOffset = 50.0;
 
     for( QString file: fileList )
     {
         if ( d->isCancelled ) // check if user canceled the process
             break;
 
-        emit progress ( this, ( ( qreal ) currentFileNumber/ ( qreal ) fileList.count() ) * progressOffset);
+        emit progress ( this, ( ( qreal ) currentFileNumber/ ( qreal ) fileList.count() ) * readInfoOffset);
 
         currentFileNumber++;
 
@@ -337,7 +340,9 @@ void medAbstractDatabaseImporter::importFile ( void )
 
     medDataIndex index; //stores the last volume's index to be emitted on success
 
-    emit progress (this, progressOffset);
+    emit progress (this, readInfoOffset);
+    d->progressIncrement =  (1.0 / imagesCount) * (100.0 - readInfoOffset);
+    d->progressOffset = readInfoOffset;
     // 3.1) Re-read selected files and re-populate them with missing metadata
     //      then write them to the database, and populate db tables
     for (auto it = fileNamesToDataNames.begin(); it != fileNamesToDataNames.end(); ++it)
@@ -350,7 +355,7 @@ void medAbstractDatabaseImporter::importFile ( void )
 
         for (int i = 0; i < data.size(); ++i)
         {
-            emit progress (this, ((qreal)currentImageIndex / (qreal)imagesCount) * (100.0 - progressOffset) + progressOffset);
+//            emit progress (this, ((qreal)currentImageIndex / (qreal)imagesCount) * (100.0 - readInfoOffset) + readInfoOffset);
             currentImageIndex++;
 
             auto medData = data[i];
@@ -414,6 +419,8 @@ void medAbstractDatabaseImporter::importFile ( void )
                 emit dataImported(index);
             }
         }
+        d->progressOffset += currentImageIndex * d->progressIncrement;
+        emit progress (this, ((qreal)currentImageIndex / (qreal)imagesCount) * (100.0 - readInfoOffset) + readInfoOffset);
     } // end of the final loop
 
     if ( ! atLeastOneImportSucceeded) {
@@ -821,6 +828,8 @@ QVector<dtkSmartPointer<medAbstractData>> medAbstractDatabaseImporter::tryReadIm
         }
         else
         {
+            connect(medReader, &medAbstractDataReader::finishedReadingData,
+                    this, &medAbstractDatabaseImporter::reportProgress);
             readSuccessful = medReader->read(filesPaths);
         }
         data = medReader->getData();
@@ -844,6 +853,11 @@ QVector<dtkSmartPointer<medAbstractData>> medAbstractDatabaseImporter::tryReadIm
     }
 
     return data;
+}
+
+void medAbstractDatabaseImporter::reportProgress(int dataIndex)
+{
+    emit progress(this, (dataIndex + 1) * d->progressIncrement + d->progressOffset);
 }
 
 //-----------------------------------------------------------------------------------------------------------

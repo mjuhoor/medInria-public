@@ -62,10 +62,12 @@ signals:
     void dataImported ( const medDataIndex& index, const QUuid& uuid );
 
 public slots:
-    void onCancel ( QObject* );
+    void onCancel ( QObject* ) override;
+
+    void reportProgress(int dataIndex);
 
 protected:
-    virtual void internalRun ( void ) ;
+    void internalRun ( void ) override;
 
     QString file ( void );
     bool isCancelled ( void );
