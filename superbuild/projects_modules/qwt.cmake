@@ -77,9 +77,11 @@ ExternalProject_Add(${ep}
   DEPENDS ${${ep}_dependencies}
   UPDATE_COMMAND ""
   # Compile only the lib
-  CONFIGURE_COMMAND ${QT_QMAKE_EXECUTABLE} ${SPEC} <SOURCE_DIR>/qwt.pro
-  BUILD_COMMAND ${MAKE_PROGRAM} sub-src
-  INSTALL_COMMAND ""
+  CONFIGURE_COMMAND "" #${QT_QMAKE_EXECUTABLE} ${SPEC} <SOURCE_DIR>/qwt.pro
+  #BUILD_COMMAND ${QT_QMAKE_EXECUTABLE} ${SPEC} <SOURCE_DIR>/qwt.pro 
+  BUILD_COMMAND ${MAKE_PROGRAM} <BINARY_DIR>/src  #sub-src
+  INSTALL_COMMAND ""  
+  BUILD_ALWAYS 1
 )
 
 ## #############################################################################

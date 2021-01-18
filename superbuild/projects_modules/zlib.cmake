@@ -42,6 +42,7 @@ function(zlib_project)
             CMAKE_ARGS ${cmake_args}
             DEPENDS ${${external_project}_dependencies}
             UPDATE_COMMAND ""
+			INSTALL_COMMAND ""
             )
 
         set(${external_project}_DIR ${build_path} PARENT_SCOPE)

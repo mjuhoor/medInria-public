@@ -39,11 +39,12 @@ set(cmake_args
 ExternalProject_Add(${ep}
   PREFIX ${EP_PATH_SOURCE}
   SOURCE_DIR ${EP_PATH_SOURCE}/${ep}
-  GIT_REPOSITORY ${git_url}
-  GIT_TAG ${git_tag}
   BINARY_DIR ${build_path}
   TMP_DIR ${tmp_path}
   STAMP_DIR ${stamp_path}
+  
+  GIT_REPOSITORY ${git_url}
+  GIT_TAG ${git_tag}
   CMAKE_GENERATOR ${gen}
   CMAKE_GENERATOR_PLATFORM ${CMAKE_GENERATOR_PLATFORM}
   CMAKE_ARGS ${cmake_args}
