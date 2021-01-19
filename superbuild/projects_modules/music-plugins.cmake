@@ -29,14 +29,12 @@ function(music_plugins_project)
     if (NOT USE_SYSTEM_${external_project})
 
         set(git_url ${GITHUB_PREFIX}Inria-Asclepios/music.git)
-        set(git_tag music3)
-
-        set(${external_project}_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type for MUSICardio plugins: None Debug Release RelWithDebInfo MinSizeRel")
+        set(git_tag mm-simu)
 
         set(cmake_args
             ${ep_common_cache_args}
-            -DCMAKE_BUILD_TYPE=${${external_project}_BUILD_TYPE}
-            -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE_medInria}
+			-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
             -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS_${external_project}}
             -DQt5_DIR=${Qt5_DIR}
             -Ddtk_DIR:FILEPATH=${dtk_DIR}
