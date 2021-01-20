@@ -32,7 +32,7 @@ set(git_tag 3.3.8)
 ## Check if patch has to be applied
 ## #############################################################################
 
-ep_GeneratePatchCommand(${ep} ${ep}_PATCH_COMMAND eigen-3.3.8.patch)
+#ep_GeneratePatchCommand(${ep} ${ep}_PATCH_COMMAND eigen-3.3.8.patch)
 
 ## #############################################################################
 ## Add external-project
@@ -48,7 +48,7 @@ ExternalProject_Add(${ep}
   
   GIT_REPOSITORY ${git_url}
   GIT_TAG ${git_tag}
-  PATCH_COMMAND ${${ep}_PATCH_COMMAND}
+  #PATCH_COMMAND ${${ep}_PATCH_COMMAND}
   DEPENDS ${${ep}_dependencies}
   UPDATE_COMMAND ""
   CONFIGURE_COMMAND ${CMAKE_COMMAND} -E echo "Eigen - no configure step required."

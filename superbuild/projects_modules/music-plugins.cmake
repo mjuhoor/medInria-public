@@ -34,7 +34,7 @@ function(music_plugins_project)
         set(cmake_args
             ${ep_common_cache_args}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE_medInria}
-			-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+            -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
             -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS_${external_project}}
             -DQt5_DIR=${Qt5_DIR}
             -Ddtk_DIR:FILEPATH=${dtk_DIR}

@@ -38,7 +38,7 @@ set(${ep}_c_flags "${${ep}_c_flags} -Wall")
 
 set(cmake_args
   ${ep_common_cache_args}
-  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE_externals_projects}
+  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE_medInria} # Same as music-plugins
   -DCMAKE_C_FLAGS:STRING=${${ep}_c_flags}
   -DCMAKE_CXX_FLAGS:STRING=${${ep}_cxx_flags}
   -DCMAKE_SHARED_LINKER_FLAGS:STRING=${${ep}_shared_linker_flags}
@@ -78,7 +78,7 @@ ExternalProject_Add(${ep}
   UPDATE_COMMAND ""
   # Compile only the lib
   CONFIGURE_COMMAND ${QT_QMAKE_EXECUTABLE} ${SPEC} <SOURCE_DIR>/qwt.pro
-  BUILD_COMMAND ${MAKE_PROGRAM}
+  BUILD_COMMAND ${MAKE_PROGRAM} sub-src
   INSTALL_COMMAND ""  
   BUILD_ALWAYS 1
 )

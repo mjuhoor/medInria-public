@@ -68,7 +68,7 @@ ExternalProject_Add(${ep}
 
     GIT_REPOSITORY ${git_url}
     GIT_TAG ${git_tag}
-	CMAKE_ARGS ${cmake_args}
+    CMAKE_ARGS ${cmake_args}
     UPDATE_COMMAND ""
     DEPENDS ${${ep}_dependencies}
     CONFIGURE_COMMAND perl ${EP_PATH_SOURCE}/${ep}/Configure VC-WIN64A no-shared no-tests no-zlib --prefix=${build_path} --openssldir=${build_path}
@@ -85,7 +85,7 @@ else()
 
     GIT_REPOSITORY ${git_url}
     GIT_TAG ${git_tag}
-	CMAKE_ARGS ${cmake_args}
+    CMAKE_ARGS ${cmake_args}
     UPDATE_COMMAND ""
     DEPENDS ${${ep}_dependencies}
     CONFIGURE_COMMAND ${EP_PATH_SOURCE}/${ep}/config no-zlib no-tests no-shared --prefix=${build_path} --openssldir=${build_path} 
