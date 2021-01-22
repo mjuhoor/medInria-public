@@ -88,18 +88,18 @@ function(music_plugins_project)
 
     endif()
 
-
 if (WIN32)
-  file(TO_NATIVE_PATH ${zlib_DIR}                 ZLIB_BIN_BASE)
+    get_property(GENERATOR_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(${GENERATOR_MULTI_CONFIG})
+        file(TO_NATIVE_PATH ${zlib_DIR} ZLIB_BIN_BASE)  
+        set(CONFIG_MODE $<$<CONFIG:debug>:Debug>$<$<CONFIG:release>:Release>$<$<CONFIG:MinSizeRel>:MinSizeRel>$<$<CONFIG:RelWithDebInfo>:RelWithDebInfo>)  
+        set(MED_BIN_BASE ${MED_BIN_BASE}\\${CONFIG_MODE}\\bin)  
   
-  set(CONFIG_MODE $<$<CONFIG:debug>:Debug>$<$<CONFIG:release>:Release>$<$<CONFIG:MinSizeRel>:MinSizeRel>$<$<CONFIG:RelWithDebInfo>:RelWithDebInfo>)
-  
-  set(MED_BIN_BASE ${MED_BIN_BASE}\\${CONFIG_MODE}\\bin)  
-  
-  add_custom_command(TARGET ${external_project}
-        POST_BUILD
-        COMMAND for %%I in ( ${ZLIB_BIN_BASE}\\bin\\${CONFIG_MODE}\\*.dll ) do (if EXIST ${MED_BIN_BASE}\\%%~nxI (del /S ${MED_BIN_BASE}\\%%~nxI & mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) else mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) 
-    )
+        add_custom_command(TARGET ${external_project}
+                           POST_BUILD
+                           COMMAND for %%I in ( ${ZLIB_BIN_BASE}\\bin\\${CONFIG_MODE}\\*.dll ) do (if EXIST ${MED_BIN_BASE}\\%%~nxI (del /S ${MED_BIN_BASE}\\%%~nxI & mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) else mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) 
+        )
+    endif()
 endif()
 
 endfunction()
