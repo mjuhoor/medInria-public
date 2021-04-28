@@ -16,11 +16,9 @@ function(zlib_project)
         set(git_url ${GITHUB_PREFIX}madler/zlib.git)
         set(git_tag v1.2.11)
 
-        set(${external_project}_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type for zlib: None Debug Release RelWithDebInfo MinSizeRel")
-
         set(cmake_args
             ${ep_common_cache_args}
-            -DCMAKE_BUILD_TYPE=${${external_project}_BUILD_TYPE}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE_externals_projects}
             -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
             -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS_${external_project}}
             )
@@ -42,6 +40,7 @@ function(zlib_project)
             CMAKE_ARGS ${cmake_args}
             DEPENDS ${${external_project}_dependencies}
             UPDATE_COMMAND ""
+            INSTALL_COMMAND ""
             )
 
         set(${external_project}_DIR ${build_path} PARENT_SCOPE)

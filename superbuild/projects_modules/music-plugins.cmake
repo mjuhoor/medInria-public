@@ -29,13 +29,11 @@ function(music_plugins_project)
     if (NOT USE_SYSTEM_${external_project})
 
         set(git_url ${GITHUB_PREFIX}Inria-Asclepios/music.git)
-        set(git_tag music3)
-
-        set(${external_project}_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type for MUSICardio plugins: None Debug Release RelWithDebInfo MinSizeRel")
+        set(git_tag mm-simu)
 
         set(cmake_args
             ${ep_common_cache_args}
-            -DCMAKE_BUILD_TYPE=${${external_project}_BUILD_TYPE}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE_medInria}
             -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
             -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS_${external_project}}
             -DQt5_DIR=${Qt5_DIR}
@@ -49,6 +47,8 @@ function(music_plugins_project)
             -Dasio_DIR:FILEPATH=${asio_DIR}
             -Dwebsocketpp_DIR:FILEPATH=${websocketpp_DIR}
             -Dopenssl_DIR:FILEPATH=${openssl_DIR}
+            -DOPENSSL_ROOT_DIR:FILEPATH=${OPENSSL_ROOT_DIR} 
+            -DOPENSSL_BUILD:FILEPATH=${OPENSSL_BUILD}
             -DEIGEN_INCLUDE_DIR:FILEPATH=${eigen_INCLUDE_DIR}
             -DQWT_INCLUDE_DIR:FILEPATH=${qwt_INCLUDE_DIR}
             -DQWT_DIR:FILEPATH=${qwt_DIR}
@@ -58,8 +58,6 @@ function(music_plugins_project)
             -DTETGEN_DIR:FILEPATH=${tetgen_DIR}
             -DQUAZIP_DIR:FILEPATH=${quazip_DIR}
             -DQUAZIP_INCLUDE_DIR:FILEPATH=${quazip_INCLUDE_DIR}
-            -DOPENSSL_ROOT_DIR:FILEPATH=${OPENSSL_ROOT_DIR}
-            -DZLIB_DIR:FILEPATH=${zlib_DIR}
             )
 
         epComputPath(${external_project})
@@ -90,18 +88,18 @@ function(music_plugins_project)
 
     endif()
 
-
 if (WIN32)
-  file(TO_NATIVE_PATH ${zlib_DIR}                 ZLIB_BIN_BASE)
+    get_property(GENERATOR_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(${GENERATOR_MULTI_CONFIG})
+        file(TO_NATIVE_PATH ${zlib_DIR} ZLIB_BIN_BASE)  
+        set(CONFIG_MODE $<$<CONFIG:debug>:Debug>$<$<CONFIG:release>:Release>$<$<CONFIG:MinSizeRel>:MinSizeRel>$<$<CONFIG:RelWithDebInfo>:RelWithDebInfo>)  
+        set(MED_BIN_BASE ${MED_BIN_BASE}\\${CONFIG_MODE}\\bin)  
   
-  set(CONFIG_MODE $<$<CONFIG:debug>:Debug>$<$<CONFIG:release>:Release>$<$<CONFIG:MinSizeRel>:MinSizeRel>$<$<CONFIG:RelWithDebInfo>:RelWithDebInfo>)
-  
-  set(MED_BIN_BASE ${MED_BIN_BASE}\\${CONFIG_MODE}\\bin)  
-  
-  add_custom_command(TARGET ${external_project}
-        POST_BUILD
-        COMMAND for %%I in ( ${ZLIB_BIN_BASE}\\bin\\${CONFIG_MODE}\\*.dll ) do (if EXIST ${MED_BIN_BASE}\\%%~nxI (del /S ${MED_BIN_BASE}\\%%~nxI & mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) else mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) 
-    )
+        add_custom_command(TARGET ${external_project}
+                           POST_BUILD
+                           COMMAND for %%I in ( ${ZLIB_BIN_BASE}\\bin\\${CONFIG_MODE}\\*.dll ) do (if EXIST ${MED_BIN_BASE}\\%%~nxI (del /S ${MED_BIN_BASE}\\%%~nxI & mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) else mklink /H ${MED_BIN_BASE}\\%%~nxI %%~fI) 
+        )
+    endif()
 endif()
 
 endfunction()
