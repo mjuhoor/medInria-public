@@ -28,8 +28,14 @@ public:
     ~vtkDataMeshWriterBase() override = default;
 
 public slots:
-    bool canWrite (const QString& path);
+    bool canWrite (const QString& path) override;
 
     void addMetaDataAsFieldData(vtkMetaDataSet* dataSet);
     void clearMetaDataFieldData(vtkMetaDataSet* dataSet);
+/*
+protected:
+    void inspectAllFieldDataInMetaData(vtkMetaDataSet* metaData, bool replaceNaN);
+    void replaceNaNsFromFieldData(vtkFieldData* fieldData, bool replaceNaN);
+    void replaceNaNsFromArray(vtkAbstractArray* array, bool replaceNaN);
+    */
 };
