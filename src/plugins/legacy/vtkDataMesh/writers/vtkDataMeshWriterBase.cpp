@@ -14,14 +14,9 @@
 
 #include <dtkCoreSupport/dtkAbstractData>
 
-#include <vtkCellData.h>
-#include <vtkDataArray.h>
-#include <vtkDoubleArray.h>
 #include <vtkFieldData.h>
-#include <vtkPointData.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
-#include <vtkType.h>
 
 const QString vtkDataMeshWriterBase::metaDataFieldPrefix = "medMetaData::";
 
