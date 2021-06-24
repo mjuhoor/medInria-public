@@ -13,6 +13,7 @@
 
 #include "vtkDataMesh4DReader.h"
 #include "vtkDataManagerReader.h"
+#include "vtkDataMeshHelper.h"
 
 #include <medAbstractData.h>
 #include <medAbstractDataFactory.h>
@@ -93,6 +94,13 @@ bool vtkDataMesh4DReader::read (const QString& path)
         vtkMetaDataSetSequence* sequence = vtkMetaDataSetSequence::SafeDownCast (this->reader->GetOutput()->GetMetaDataSet ((unsigned int)0));
         if (sequence && sequence->GetNumberOfMetaDataSets() > 0)
         {
+            for (int i = 0; i < sequence->GetNumberOfMetaDataSets(); ++i)
+            {
+                vtkMetaDataSet* metaDataSet = sequence->GetMetaDataSet(i);
+                // convert invalid value to NaN
+                DataMeshHelper::prepareMetaDataForAsciiReadOrWrite(metaDataSet, false);
+            }
+
             if (!extractMetaData(sequence->GetMetaDataSet(0)))
             {
                 qDebug() << metaObject()->className() << ": no metadata found in " << path;
