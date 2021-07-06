@@ -97,7 +97,7 @@ set(cmake_args
 if (${USE_FFmpeg})
   list(APPEND cmake_args
   -DUSE_FFmpeg=${USE_FFmpeg})
-endif() 
+endif()
 
 if (USE_DTKIMAGING)
   set(cmake_args

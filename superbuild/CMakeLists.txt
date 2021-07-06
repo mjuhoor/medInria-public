@@ -63,10 +63,6 @@ list(APPEND external_projects
      QtDCM
      dtk
      LogDemons
-     jsoncons
-     asio
-     websocketpp
-     openssl
      eigen
      qwt
      mmg
@@ -74,6 +70,15 @@ list(APPEND external_projects
      zlib
      quazip
      )
+     
+if (${USE_RealTimeWorkspace})
+    list(APPEND ${external_project}_dependencies
+        jsoncons
+        asio
+        websocketpp
+        openssl
+    )
+endif() 
 
 if (USE_DTKIMAGING)
     list(APPEND external_projects
