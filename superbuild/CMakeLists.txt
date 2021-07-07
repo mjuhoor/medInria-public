@@ -70,9 +70,11 @@ list(APPEND external_projects
      zlib
      quazip
      )
-     
+
+# Realtime
+option(USE_RealTimeWorkspace "Build the real time workspace and linked externals libraries" OFF)
 if (${USE_RealTimeWorkspace})
-    list(APPEND ${external_project}_dependencies
+    list(APPEND external_projects
         jsoncons
         asio
         websocketpp

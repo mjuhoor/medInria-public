@@ -66,12 +66,6 @@ option(USE_FFmpeg
   )
 endif()
 
-# MSC
-option(USE_RealTimeWorkspace
-  "Build the real time workspace and externals libraries"
-  OFF
-)
-
 ## #############################################################################
 ## Find package
 ## #############################################################################
