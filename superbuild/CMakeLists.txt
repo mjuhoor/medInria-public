@@ -63,10 +63,6 @@ list(APPEND external_projects
      QtDCM
      dtk
      LogDemons
-     jsoncons
-     asio
-     websocketpp
-     openssl
      eigen
      qwt
      mmg
@@ -74,6 +70,17 @@ list(APPEND external_projects
      zlib
      quazip
      )
+
+# Realtime
+option(USE_RealTimeWorkspace "Build the real time workspace and linked externals libraries" OFF)
+if (${USE_RealTimeWorkspace})
+    list(APPEND external_projects
+        jsoncons
+        asio
+        websocketpp
+        openssl
+    )
+endif() 
 
 if (USE_DTKIMAGING)
     list(APPEND external_projects

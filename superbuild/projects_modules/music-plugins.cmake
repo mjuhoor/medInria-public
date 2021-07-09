@@ -8,10 +8,6 @@ function(music_plugins_project)
         VTK
         DCMTK
         medInria
-        jsoncons
-        asio
-        websocketpp
-        openssl
         mmg
         tetgen
         eigen
@@ -19,6 +15,15 @@ function(music_plugins_project)
         quazip
         zlib
         )
+
+    if (${USE_RealTimeWorkspace})
+        list(APPEND ${external_project}_dependencies
+            jsoncons
+            asio
+            websocketpp
+            openssl
+        )
+    endif() 
 
     EP_Initialisation(${external_project}
         USE_SYSTEM OFF
@@ -60,6 +65,11 @@ function(music_plugins_project)
             -DQUAZIP_INCLUDE_DIR:FILEPATH=${quazip_INCLUDE_DIR}
             -DZLIB_DIR:FILEPATH=${zlib_DIR}
             )
+
+        if (${USE_RealTimeWorkspace})
+            list(APPEND cmake_args
+            -DUSE_RealTimeWorkspace=${USE_RealTimeWorkspace})
+        endif()
 
         epComputPath(${external_project})
         ExternalProject_Add(${external_project}

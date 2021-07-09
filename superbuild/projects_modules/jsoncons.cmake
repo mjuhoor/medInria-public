@@ -1,10 +1,28 @@
-function(jsoncons_project)
+################################################################################
+#
+# medInria
+#
+# Copyright (c) INRIA 2013. All rights reserved.
+# See LICENSE.txt for details.
+#
+#  This software is distributed WITHOUT ANY WARRANTY; without even
+#  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+#  PURPOSE.
+#
+################################################################################
 
+include_guard(GLOBAL)
+if(${USE_RealTimeWorkspace})
+
+function(jsoncons_project)
 set(ep jsoncons)
+
 ## #############################################################################
 ## List the dependencies of the project
 ## #############################################################################
+
 list(APPEND ${ep}_dependencies  "") 
+
 ## #############################################################################
 ## Prepare the project
 ## ############################################################################# 
@@ -51,3 +69,4 @@ set(${ep}_DIR ${EP_PATH_SOURCE}/${ep} PARENT_SCOPE)
 endif() #NOT USE_SYSTEM_ep
 
 endfunction()
+endif()
