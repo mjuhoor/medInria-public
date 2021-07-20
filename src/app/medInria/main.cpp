@@ -29,6 +29,10 @@
 #include <medSettingsManager.h>
 #include <medStorage.h>
 
+#if defined(USE_PYTHON)
+#include <medPython.h>
+#endif
+
 void forceShow(medMainWindow& mainwindow )
 {
     //Idea and code taken from the OpenCOR project, Thanks Allan for the code!
@@ -107,6 +111,9 @@ int main(int argc,char* argv[])
             #ifdef ACTIVATE_WALL_OPTION
                  << "[[--wall] [--tracker=URL]] "
             #endif
+            #ifdef USE_PYTHON
+                 << "[--no-python]"
+            #endif
                  << "[[--view] [files]]";
         return 1;
     }
@@ -138,7 +145,8 @@ int main(int argc,char* argv[])
                      << "--tracker"
                      << "--stereo"
                      << "--view"
-                     << "--debug");
+                     << "--debug"
+                     << "--no-python");
             for (QStringList::const_iterator opt=options.constBegin();opt!=options.constEnd();++opt)
             {
                 if (arg.startsWith(*opt))
@@ -271,6 +279,13 @@ int main(int argc,char* argv[])
     application.setMainWindow(mainwindow);
 
     forceShow(*mainwindow);
+
+#if defined(USE_PYTHON)
+    if (!application.arguments().contains("--no-python"))
+    {
+        med::python::setup();
+    }
+#endif
 
     qInfo() << "### Application is running...";
 
